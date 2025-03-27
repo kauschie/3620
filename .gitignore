@@ -1,0 +1,6 @@
+*.log
+*.zip
+reticulum-meshchat/
+pipe_storage
+old/
+lxmf/
