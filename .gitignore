@@ -4,3 +4,10 @@ reticulum-meshchat/
 pipe_storage
 old/
 lxmf/
+codec2/
+repos/
+*.zip
+*.wav
+*.c2
+*.raw
+__pycache__/
