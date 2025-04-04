@@ -26,7 +26,7 @@ LOGFILE = os.path.join(STORAGE_DIR, "listener.log")
 DISPLAY_NAME = "AudioNode"
 STAMP_COST = 8
 ANNOUNCE_INTERVAL = 30  # seconds
-TEST_WAV_PATH = "/home/mkausch/dev/3620/proj/test_audio.wav"
+TEST_WAV_PATH = "/home/mkausch/dev/3620/proj/sup.wav"
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
