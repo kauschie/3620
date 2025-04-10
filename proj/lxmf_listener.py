@@ -26,7 +26,10 @@ LOGFILE = os.path.join(STORAGE_DIR, "listener.log")
 DISPLAY_NAME = "AudioNode"
 STAMP_COST = 8
 ANNOUNCE_INTERVAL = 30  # seconds
-TEST_WAV_PATH = "/home/mkausch/dev/3620/proj/sup.wav"
+TEST_WAV_PATH = "/home/mkausch/dev/3620/proj/bee.wav"
+CAGE = "656558850a2b2cd46892a2530b3affc4"
+ARM_6 = "8bfdd2075c73a7d1c640e51df4c979ef"
+
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
@@ -66,12 +69,26 @@ destination = router.register_delivery_identity(
 # === Handle incoming messages ===
 def handle_delivery(message: LXM):
     try:
-        logging.info("=== LXMF MESSAGE RECEIVED ===")
-        logging.info(f"From      : {RNS.prettyhexrep(message.source_hash)}")
-        logging.info(f"Title     : {message.title_as_string()}")
-        logging.info(f"Content   : {message.content_as_string()}")
-        logging.info(f"Fields    : {message.fields}")
-        logging.info("==============================")
+        time_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(message.timestamp))
+        signature_string = "Validated" if message.signature_validated else "Invalid or Unknown"
+        stamp_string = "Validated" if message.stamp_valid else "Invalid"
+
+
+        logging.info("\t+--- LXMF RECEIVED FROM PIPE ---------------------------")
+        logging.info(f"\t| Source hash          : {RNS.prettyhexrep(message.source_hash)}")
+        logging.info(f"\t| Source instance      : {message.get_source()}")
+        logging.info(f"\t| Destination hash     : {RNS.prettyhexrep(message.destination_hash)}")
+        logging.info(f"\t| Destination instance : {message.get_destination()}")
+        logging.info(f"\t| Encryption           : {message.transport_encryption}")
+        logging.info(f"\t| Timestamp            : {time_string}")
+        logging.info(f"\t| Title                : {message.title_as_string()}")
+        logging.info(f"\t| Content              : {message.content_as_string()}")
+        logging.info(f"\t| Fields               : {message.fields}")
+        if message.ratchet_id:
+            logging.info(f"\t| Ratchet              : {RNS.Identity._get_ratchet_id(message.ratchet_id)}")
+        logging.info(f"\t| Signature            : {signature_string}")
+        logging.info(f"\t| Stamp                : {stamp_string}")
+        logging.info("\t+-------------------------------------------------------")
 
 
         # Detect and handle incoming audio message
@@ -106,6 +123,23 @@ def periodic_announce():
         success = router.announce(destination.hash)
         logging.info("[AudioNode] Announced to LXMF network. Success: {}".format(success))
         # if time.time() - boot_time < 10:
+
+        pri_bytes = bytes.fromhex(ARM_6)
+
+        if not RNS.Transport.has_path(pri_bytes):
+            RNS.log("Destination is not yet known. Requesting path and waiting for announce to arrive...")
+            RNS.Transport.request_path(pri_bytes)
+            while not RNS.Transport.has_path(pri_bytes):
+                time.sleep(0.1)
+
+        # Recall the server identity
+        recipient_identity = RNS.Identity.recall(pri_bytes)
+
+        pri_dest = RNS.Destination(recipient_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
+
+        reply = audio.create_lxmf_audio_message(pri_dest, destination, TEST_WAV_PATH, codec="codec2", title="Voice Message", bitrate=1200)
+        router.handle_outbound(reply)
+        print("[AudioNode] Sent CAGE a message.")
         time.sleep(5)  # fast announce for first 10 seconds
         # else:
             # time.sleep(120)  # slow down after  
